@@ -78,6 +78,12 @@ export const createNewUser = async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Basic email regex
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
     // Check if the email already exists in the database
     const existingUser = await User.findOne({ 
         $or: [{ email }, { username }, { phone }],
@@ -86,14 +92,20 @@ export const createNewUser = async (req, res) => {
       return res.status(409).json({ message: "Email, username or phone already in use" });
     }
 
+    // Validate phone number format
+    const phoneRegex = /^\+\d{1,3}[-.\s]?\d{1,4}[-.\s]?\d{3,4}[-.\s]?\d{4}$/; // Example regex for 10-digit phone number
+    if (!phoneRegex.test(phone)) {
+      return res.status(400).json({ message: "Invalid phone number format" });
+    }
+
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create a new user
     const newUser = new User({
       name,
-      email,
-      username,
+      email: email.toLowerCase(),
+      username: username.toLowerCase(),
       password: hashedPassword,
       phone,
       isAdmin: true || role === "admin",
@@ -103,7 +115,7 @@ export const createNewUser = async (req, res) => {
     await newUser.save();
 
     res.status(201).json({
-      message: "User created successfully, please verify your email",
+      message: "User created successfully, account need to be verified before login",
       user: {
         id: newUser._id,
         name: newUser.name,
